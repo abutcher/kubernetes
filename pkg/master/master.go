@@ -167,6 +167,9 @@ type Config struct {
 	// The IP address for the master service (must be inside ServiceClusterIPRange
 	ServiceReadWriteIP net.IP
 
+	// Ports to be exposed for the master service
+	ServicePorts []api.ServicePort
+
 	// The range of ports to be assigned to services with type=NodePort or greater
 	ServiceNodePortRange util.PortRange
 
@@ -210,11 +213,11 @@ type Master struct {
 	// External host is the name that should be used in external (public internet) URLs for this master
 	externalHost string
 	// clusterIP is the IP address of the master within the cluster.
-	clusterIP            net.IP
-	publicReadWritePort  int
-	serviceReadWriteIP   net.IP
-	serviceReadWritePort int
-	masterServices       *util.Runner
+	clusterIP           net.IP
+	publicReadWritePort int
+	serviceReadWriteIP  net.IP
+	servicePorts        []api.ServicePort
+	masterServices      *util.Runner
 
 	// storage contains the RESTful endpoints exposed by this master
 	storage map[string]rest.Storage
@@ -282,6 +285,16 @@ func setDefaults(c *Config) {
 		}
 		glog.V(4).Infof("Setting master service IP to %q (read-write).", serviceReadWriteIP)
 		c.ServiceReadWriteIP = serviceReadWriteIP
+	}
+	if c.ServicePorts == nil {
+		c.ServicePorts = []api.ServicePort{
+			{
+				Name:       "https",
+				Port:       443,
+				Protocol:   api.ProtocolTCP,
+				TargetPort: util.NewIntOrStringFromInt(443),
+			},
+		}
 	}
 	if c.ServiceNodePortRange.Size == 0 {
 		// TODO: Currently no way to specify an empty range (do we need to allow this?)
@@ -377,8 +390,7 @@ func New(c *Config) *Master {
 		clusterIP:           c.PublicAddress,
 		publicReadWritePort: c.ReadWritePort,
 		serviceReadWriteIP:  c.ServiceReadWriteIP,
-		// TODO: serviceReadWritePort should be passed in as an argument, it may not always be 443
-		serviceReadWritePort: 443,
+		servicePorts:        c.ServicePorts,
 
 		installSSHKey: c.InstallSSHKey,
 	}
@@ -711,7 +723,7 @@ func (m *Master) NewBootstrapController() *Controller {
 		PublicIP: m.clusterIP,
 
 		ServiceIP:         m.serviceReadWriteIP,
-		ServicePort:       m.serviceReadWritePort,
+		ServicePorts:      m.servicePorts,
 		PublicServicePort: m.publicReadWritePort,
 	}
 }

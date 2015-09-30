@@ -183,7 +183,14 @@ func TestNewBootstrapController(t *testing.T) {
 
 	master.serviceNodePortRange = portRange
 	master.masterCount = 1
-	master.serviceReadWritePort = 1000
+	master.servicePorts = []api.ServicePort{
+		{
+			Name:       "service-rw",
+			Port:       1000,
+			Protocol:   api.ProtocolTCP,
+			TargetPort: util.NewIntOrStringFromInt(1000),
+		},
+	}
 	master.publicReadWritePort = 1010
 
 	controller := master.NewBootstrapController()
@@ -193,7 +200,7 @@ func TestNewBootstrapController(t *testing.T) {
 	assert.Equal(controller.ServiceRegistry, master.serviceRegistry)
 	assert.Equal(controller.ServiceNodePortRange, portRange)
 	assert.Equal(controller.MasterCount, master.masterCount)
-	assert.Equal(controller.ServicePort, master.serviceReadWritePort)
+	assert.Equal(controller.ServicePorts, master.servicePorts)
 	assert.Equal(controller.PublicServicePort, master.publicReadWritePort)
 }
 
